@@ -134,7 +134,7 @@ public:
 		for (i = i1; i < i2; i++) { // Process current range of scales
 			int dataStart = 0;
 			for (int d = 0; d < outputMatrix->dims; ++d) {
-				// No need to jump when d == dim since currentStep[dim] will be 0
+				// No need to jump when d == dim since steps[i * outputMatrix->dims + dim] will be 0
 				dataStart += steps[i * outputMatrix->dims + d]
 						* outputMatrix->step[d] / 4;
 			}
