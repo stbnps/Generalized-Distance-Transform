@@ -1,4 +1,3 @@
-
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/opencv_modules.hpp"
@@ -157,7 +156,7 @@ private:
 };
 
 /*
- * Calculates the distance transform along one dimension for the whole input matrix.
+ * Calculates the distance transform.
  */
 void distanceTransform(const Mat &inputMatrix, Mat &outputMatrix,
 		Mat &locations) {
