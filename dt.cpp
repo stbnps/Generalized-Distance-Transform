@@ -1,13 +1,16 @@
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/opencv_modules.hpp"
+#include "dt.hpp"
+#include <algorithm>
 
-using namespace cv;
 using namespace std;
 
 template<class T> T square(const T &x) {
 	return x * x;
 }
+
+namespace cv {
 
 /*
  * Calculates the distance transform along one dimension for the whole input matrix.
@@ -114,12 +117,10 @@ void distanceTransform1d(const Mat &inputMatrix, Mat &outputMatrix,
 //	}
 //
 //}
-
-
 class DistanceTransformInvoker: public ParallelLoopBody {
 public:
 	DistanceTransformInvoker(Mat& inputMatrix, Mat *outputMatrix,
-			Mat *locations, int *steps, int dim) {
+			Mat *locations, int **steps, int dim) {
 		*outputMatrix = inputMatrix;
 		this->outputMatrix = outputMatrix;
 		this->locationsMatrix = locations;
@@ -135,7 +136,7 @@ public:
 			int dataStart = 0;
 			for (int d = 0; d < outputMatrix->dims; ++d) {
 				// No need to jump when d == dim since steps[i * outputMatrix->dims + dim] will be 0
-				dataStart += steps[i * outputMatrix->dims + d]
+				dataStart += steps[i][d]
 						* outputMatrix->step[d] / 4;
 			}
 
@@ -150,7 +151,7 @@ public:
 private:
 	Mat *outputMatrix;
 	Mat *locationsMatrix;
-	int *steps;
+	int **steps;
 	int dim;
 
 };
@@ -159,13 +160,26 @@ private:
  * Calculates the distance transform.
  */
 void distanceTransform(const Mat &inputMatrix, Mat &outputMatrix,
-		Mat &locations) {
+		Mat &locations, std::vector<float> weights) {
 
 	// Input matrix has proper type
 	CV_Assert(inputMatrix.type() == CV_32FC1);
 
+	CV_Assert(
+			(weights.size() == 0)
+					|| ((int ) weights.size() == inputMatrix.dims));
+
 	// This way we don't mess with users input, they may want to use it later
 	outputMatrix = inputMatrix.clone();
+
+	vector<int> sizes;
+	// For each input pixel the location matrix will have "inputMatrix.dims" parameters
+	sizes.push_back(inputMatrix.dims);
+	for (int d = 0; d < inputMatrix.dims; ++d) {
+		sizes.push_back(inputMatrix.size[d]);
+	}
+
+	locations = Mat(sizes.size(), &sizes[0], CV_32SC1);
 
 	for (int dim = outputMatrix.dims - 1; dim >= 0; --dim) {
 
@@ -179,9 +193,10 @@ void distanceTransform(const Mat &inputMatrix, Mat &outputMatrix,
 		}
 
 		// Calculate steps for each iteration, so that iterations can be parallelized
-		int currentStep[iterations][outputMatrix.dims]; // Stores in which column, row, z step, etc we are
-
-		memset(currentStep, 0, iterations * outputMatrix.dims * sizeof(int));
+		int **currentStep = new int*[iterations]();
+		for (int i = 0; i < iterations; ++i) {
+			currentStep[i] = new int[outputMatrix.dims]();
+		}
 
 		for (int it = 1; it < iterations; ++it) {
 			// Add 1 to the array to know which steps to take now
@@ -213,11 +228,33 @@ void distanceTransform(const Mat &inputMatrix, Mat &outputMatrix,
 			// End of addition block
 		}
 
+		/*
+		 * Doing outputMatrix *= weights[dim]; and then outputMatrix /= weights[dim];
+		 * may seem odd, but that way we calculate a mahalanobis distance transform
+		 * when the covariance matrix is diagonal.
+		 */
+
+		if (weights.size() != 0) {
+			outputMatrix *= weights[dim];
+		}
+
 		// Perform 1d distance transform along the current dimension on the whole matrix
 		Range range(0, iterations);
 		DistanceTransformInvoker invoker(outputMatrix, &outputMatrix,
-				&locations, &currentStep[0][0], dim);
+				&locations, currentStep, dim);
 		parallel_for_(range, invoker);
 
+		if (weights.size() != 0) {
+			outputMatrix /= weights[dim];
+		}
+
+
+		for (int i = 0; i < iterations; ++i) {
+			delete(currentStep[i]);
+		}
+		delete(currentStep);
+
 	}
+}
+
 }

@@ -3,7 +3,7 @@
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/opencv_modules.hpp"
-#include "dt.h"
+#include "dt.hpp"
 
 
 using namespace cv;
@@ -12,8 +12,12 @@ using namespace std;
 int main() {
 	Mat t = Mat::ones(Size(4, 4), CV_32FC1) * 10;
 	Mat r = Mat::zeros(Size(4, 4), CV_32FC1);
-	int sizes[] = { 2, 4, 4 };
-	Mat l(3, sizes, CV_32SC1);
+	Mat l;
+
+	// Just to test that weighting is working
+	vector<float> weights;
+	weights.push_back(2);
+	weights.push_back(2);
 
 //	t.at<float>(0, 0) = 10;
 //	t.at<float>(1, 0) = 10;
@@ -24,7 +28,7 @@ int main() {
 
 	cout << t << endl << endl;
 
-	distanceTransform(t, r, l);
+	distanceTransform(t, r, l, weights);
 
 	cout << r << endl;
 
