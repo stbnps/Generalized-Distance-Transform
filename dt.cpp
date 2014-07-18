@@ -1,3 +1,31 @@
+//	Copyright (c) 2014, Esteban Pardo Sánchez
+//	All rights reserved.
+//
+//	Redistribution and use in source and binary forms, with or without modification,
+//	are permitted provided that the following conditions are met:
+//
+//	1. Redistributions of source code must retain the above copyright notice, this
+//	list of conditions and the following disclaimer.
+//
+//	2. Redistributions in binary form must reproduce the above copyright notice,
+//	this list of conditions and the following disclaimer in the documentation and/or
+//	other materials provided with the distribution.
+//
+//	3. Neither the name of the copyright holder nor the names of its contributors
+//	may be used to endorse or promote products derived from this software without
+//	specific prior written permission.
+//
+//	THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+//	ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+//	WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+//	DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+//	ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+//	(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+//	LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+//	ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+//	(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+//	SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/opencv_modules.hpp"
@@ -5,40 +33,37 @@
 #include <algorithm>
 
 using namespace std;
+using namespace cv;
 
 template<class T> T square(const T &x) {
 	return x * x;
 }
 
-namespace cv {
 
 /*
- * Calculates the distance transform along one dimension for the whole input matrix.
+ * Calculates the distance transform on a one dimensional array.
+ * f is the input signal
+ * d is the output signal
+ * l is the array containing, for each position, the location of the parabola
+ * which affects that position
+ * n is the size of the array
  */
-void distanceTransform1d(const Mat &inputMatrix, Mat &outputMatrix,
-		Mat &locations, int dataStart, int dim) {
+void distanceTransform1d(float *f, float *d, int *l, int n) {
 
-	const float inf = 1e15f;
-	int n = inputMatrix.size[dim];
-	int step = inputMatrix.step[dim] / 4; // inputMatrix.step is in bytes; 4 bytes each float
-	float *f = (float *) inputMatrix.data;
-	f += dataStart;
-	float *d = (float *) outputMatrix.data;
-	d += dataStart;
-	int *l = (int *) locations.data;
-	l += dataStart;
+	const float inf = 1e20f;
 	int *v = new int[n];
 	float *z = new float[n + 1];
 	int k = 0;
 	v[0] = 0;
 	z[0] = -inf;
 	z[1] = +inf;
+	
 	for (int q = 1; q <= n - 1; q++) {
-		float s = ((f[q * step] + square(q)) - (f[v[k] * step] + square(v[k])))
+		float s = ((f[q] + square(q)) - (f[v[k]] + square(v[k])))
 				/ (2 * q - 2 * v[k]);
 		while (s <= z[k]) {
 			k--;
-			s = ((f[q * step] + square(q)) - (f[v[k] * step] + square(v[k])))
+			s = ((f[q] + square(q)) - (f[v[k]] + square(v[k])))
 					/ (2 * q - 2 * v[k]);
 		}
 		k++;
@@ -51,13 +76,12 @@ void distanceTransform1d(const Mat &inputMatrix, Mat &outputMatrix,
 	for (int q = 0; q <= n - 1; q++) {
 		while (z[k + 1] < q)
 			k++;
-		d[q * step] = square(q - v[k]) + f[v[k] * step];
-		l[q * step + dim * locations.step[0] / 4] = v[k]; // Save minimum location
+		d[q] = square(q - v[k]) + f[v[k]];
+		l[q] = v[k];
 	}
 
 	delete[] v;
 	delete[] z;
-
 }
 
 /*
@@ -117,11 +141,13 @@ void distanceTransform1d(const Mat &inputMatrix, Mat &outputMatrix,
 //	}
 //
 //}
+
+// Parallel invoker
 class DistanceTransformInvoker: public ParallelLoopBody {
 public:
 	DistanceTransformInvoker(Mat& inputMatrix, Mat *outputMatrix,
 			Mat *locations, int **steps, int dim) {
-		*outputMatrix = inputMatrix;
+		*outputMatrix = inputMatrix.clone();
 		this->outputMatrix = outputMatrix;
 		this->locationsMatrix = locations;
 		this->steps = steps;
@@ -136,13 +162,44 @@ public:
 			int dataStart = 0;
 			for (int d = 0; d < outputMatrix->dims; ++d) {
 				// No need to jump when d == dim since steps[i * outputMatrix->dims + dim] will be 0
-				dataStart += steps[i][d]
-						* outputMatrix->step[d] / 4;
+				dataStart += steps[i][d] * outputMatrix->step[d] / 4;
 			}
 
+//			Mat tmp = outputMatrix->clone();
 			// Now we have calculated where the data starts, perform the distance transform
-			distanceTransform1d(*outputMatrix, *outputMatrix, *locationsMatrix,
-					dataStart, dim);
+			float *f = new float[outputMatrix->size[dim]];
+			float *d = new float[outputMatrix->size[dim]];
+			int *l = new int[outputMatrix->size[dim]];
+			float *castedOutputMatrix = (float *) outputMatrix->data;
+			int *castedLocationsMatrix = (int *) locationsMatrix->data;
+			/*
+			 * Strided copy.
+			 * Creates the 1d array where the distance transform will be performed.
+			 * This array will hold the section of the global matrix were the
+			 * distance transform would be performed.
+			 */
+			for (int i = 0; i < outputMatrix->size[dim]; ++i) {
+				f[i] = castedOutputMatrix[dataStart
+						+ i * outputMatrix->step[dim] / 4];
+//				std::cout << f[i] << std::endl;
+			}
+			distanceTransform1d(f, d, l, outputMatrix->size[dim]);
+//			distanceTransform1d(*outputMatrix, *outputMatrix, *locationsMatrix,
+//					dataStart, dim);
+
+			// Strided write
+			for (int i = 0; i < outputMatrix->size[dim]; ++i) {
+				castedOutputMatrix[dataStart + i * outputMatrix->step[dim] / 4] =
+						d[i];
+//				std::cout << outputMatrix->data[dataStart + i * outputMatrix->step[dim] / 4] << std::endl;
+				castedLocationsMatrix[dataStart
+						+ i * outputMatrix->step[dim] / 4
+						+ dim * locationsMatrix->step[0] / 4] = l[i];
+			}
+
+			delete[] f;
+			delete[] d;
+			delete[] l;
 
 		}
 
@@ -234,27 +291,40 @@ void distanceTransform(const Mat &inputMatrix, Mat &outputMatrix,
 		 * when the covariance matrix is diagonal.
 		 */
 
+
+		// When the weight is too small use 0.00001 since 0 would screw the results
+		double zero = 0.00001;
+
 		if (weights.size() != 0) {
-			outputMatrix *= weights[dim];
+			if (weights[dim] >= 0.1) {
+				outputMatrix *= weights[dim];
+			} else {
+				outputMatrix *= zero;
+			}
 		}
+
 
 		// Perform 1d distance transform along the current dimension on the whole matrix
 		Range range(0, iterations);
 		DistanceTransformInvoker invoker(outputMatrix, &outputMatrix,
 				&locations, currentStep, dim);
-		parallel_for_(range, invoker);
+
+		cv::parallel_for_(range, invoker);
 
 		if (weights.size() != 0) {
-			outputMatrix /= weights[dim];
+			if (weights[dim] >= 0.1) {
+				outputMatrix /= weights[dim];
+			} else {
+				outputMatrix /= zero;
+			}
 		}
-
 
 		for (int i = 0; i < iterations; ++i) {
-			delete(currentStep[i]);
+			delete (currentStep[i]);
 		}
-		delete(currentStep);
+		delete (currentStep);
+
 
 	}
 }
 
-}

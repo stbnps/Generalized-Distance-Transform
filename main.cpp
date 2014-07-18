@@ -19,17 +19,14 @@ int main() {
 	weights.push_back(2);
 	weights.push_back(2);
 
-//	t.at<float>(0, 0) = 10;
-//	t.at<float>(1, 0) = 10;
-//	t.at<float>(2, 0) = 10;
-//	t.at<float>(0, 1) = 10;
-//	t.at<float>(0, 2) = 10;
 	t.at<float>(2, 2) = 1;
 
+	cout << "Input:" << endl;
 	cout << t << endl << endl;
 
 	distanceTransform(t, r, l, weights);
 
+	cout << "Result:" << endl;
 	cout << r << endl;
 
 	int *locations = (int *) l.data;
@@ -39,6 +36,7 @@ int main() {
 	/*
 	 * Print locations of the minimum values
 	 */
+	cout << "Locations X:" << endl;
 	for (size_t row = 0; row < 4; ++row) {
 		for (size_t col = 0; col < 4; ++col) {
 			cout << locations[col + 4 * row] << ", ";
@@ -48,6 +46,7 @@ int main() {
 
 	cout << endl;
 
+	cout << "Locations Y:" << endl;
 	for (size_t row = 0; row < 4; ++row) {
 		for (size_t col = 0; col < 4; ++col) {
 			cout << locations[16 + col + 4 * row] << ", ";
