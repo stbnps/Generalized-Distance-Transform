@@ -36,7 +36,7 @@ int main() {
 	/*
 	 * Print locations of the minimum values
 	 */
-	cout << "Locations X:" << endl;
+	cout << "Locations Y:" << endl;
 	for (size_t row = 0; row < 4; ++row) {
 		for (size_t col = 0; col < 4; ++col) {
 			cout << locations[col + 4 * row] << ", ";
@@ -46,7 +46,7 @@ int main() {
 
 	cout << endl;
 
-	cout << "Locations Y:" << endl;
+	cout << "Locations X:" << endl;
 	for (size_t row = 0; row < 4; ++row) {
 		for (size_t col = 0; col < 4; ++col) {
 			cout << locations[16 + col + 4 * row] << ", ";

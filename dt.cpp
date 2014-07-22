@@ -165,7 +165,6 @@ public:
 				dataStart += steps[i][d] * outputMatrix->step[d] / 4;
 			}
 
-//			Mat tmp = outputMatrix->clone();
 			// Now we have calculated where the data starts, perform the distance transform
 			float *f = new float[outputMatrix->size[dim]];
 			float *d = new float[outputMatrix->size[dim]];
@@ -181,17 +180,13 @@ public:
 			for (int i = 0; i < outputMatrix->size[dim]; ++i) {
 				f[i] = castedOutputMatrix[dataStart
 						+ i * outputMatrix->step[dim] / 4];
-//				std::cout << f[i] << std::endl;
 			}
 			distanceTransform1d(f, d, l, outputMatrix->size[dim]);
-//			distanceTransform1d(*outputMatrix, *outputMatrix, *locationsMatrix,
-//					dataStart, dim);
 
 			// Strided write
 			for (int i = 0; i < outputMatrix->size[dim]; ++i) {
 				castedOutputMatrix[dataStart + i * outputMatrix->step[dim] / 4] =
 						d[i];
-//				std::cout << outputMatrix->data[dataStart + i * outputMatrix->step[dim] / 4] << std::endl;
 				castedLocationsMatrix[dataStart
 						+ i * outputMatrix->step[dim] / 4
 						+ dim * locationsMatrix->step[0] / 4] = l[i];
