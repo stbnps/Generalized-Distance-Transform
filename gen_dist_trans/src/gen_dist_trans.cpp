@@ -29,16 +29,20 @@
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/opencv_modules.hpp"
-#include "dt.hpp"
+#include "opencv2/gen_dist_trans.hpp"
 #include <algorithm>
 
 using namespace std;
 using namespace cv;
 
+namespace cv
+{
+
 template<class T> T square(const T &x) {
 	return x * x;
 }
 
+namespace { // avoid exporting symbols
 
 /*
  * Calculates the distance transform on a one dimensional array.
@@ -208,30 +212,34 @@ private:
 
 };
 
+} // local namespace
+
+
 /*
  * Calculates the distance transform.
  */
-void distanceTransform(const Mat &inputMatrix, Mat &outputMatrix,
-		Mat &locations, std::vector<float> weights) {
+void distanceTransform(InputArray _sampled, OutputArray _dist,
+    OutputArray _locations, InputArray _weights) {
+
+    const cv::Mat inputMatrix = _sampled.getMat();
+    _sampled.copyTo(_dist);
+    cv::Mat outputMatrix = _dist.getMat();
+    const cv::Mat weights = _weights.getMat();
 
 	// Input matrix has proper type
 	CV_Assert(inputMatrix.type() == CV_32FC1);
+    // Dimension scaling is unspecified or has proper size
+	CV_Assert(weights.empty() || (weights.total() == inputMatrix.dims));
 
-	CV_Assert(
-			(weights.size() == 0)
-					|| ((int ) weights.size() == inputMatrix.dims));
-
-	// This way we don't mess with users input, they may want to use it later
-	outputMatrix = inputMatrix.clone();
-
+    // Create location matrix, for each input pixel the location matrix will
+    // have "inputMatrix.dims" parameters.
 	vector<int> sizes;
-	// For each input pixel the location matrix will have "inputMatrix.dims" parameters
 	sizes.push_back(inputMatrix.dims);
 	for (int d = 0; d < inputMatrix.dims; ++d) {
 		sizes.push_back(inputMatrix.size[d]);
 	}
-
-	locations = Mat(sizes.size(), &sizes[0], CV_32SC1);
+	_locations.create(sizes.size(), &sizes[0], CV_32SC1);
+	Mat locations = _locations.getMat();
 
 	for (int dim = outputMatrix.dims - 1; dim >= 0; --dim) {
 
@@ -290,9 +298,9 @@ void distanceTransform(const Mat &inputMatrix, Mat &outputMatrix,
 		// When the weight is too small use 0.00001 since 0 would screw the results
 		double zero = 0.00001;
 
-		if (weights.size() != 0) {
-			if (weights[dim] >= 0.1) {
-				outputMatrix *= weights[dim];
+		if (!weights.empty()) {
+			if (weights.at<double>(dim) >= 0.1) {
+				outputMatrix *= weights.at<double>(dim);
 			} else {
 				outputMatrix *= zero;
 			}
@@ -306,9 +314,9 @@ void distanceTransform(const Mat &inputMatrix, Mat &outputMatrix,
 
 		cv::parallel_for_(range, invoker);
 
-		if (weights.size() != 0) {
-			if (weights[dim] >= 0.1) {
-				outputMatrix /= weights[dim];
+		if (!weights.empty()) {
+			if (weights.at<double>(dim) >= 0.1) {
+				outputMatrix /= weights.at<double>(dim);
 			} else {
 				outputMatrix /= zero;
 			}
@@ -317,9 +325,10 @@ void distanceTransform(const Mat &inputMatrix, Mat &outputMatrix,
 		for (int i = 0; i < iterations; ++i) {
 			delete (currentStep[i]);
 		}
-		delete (currentStep);
+		delete[](currentStep);
 
 
 	}
 }
 
+} // namepsace cv

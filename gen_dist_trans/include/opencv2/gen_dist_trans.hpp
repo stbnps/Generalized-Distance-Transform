@@ -32,9 +32,14 @@
 
 #include "opencv2/opencv.hpp"
 
-// Calculates the distance trasnform as described in Distance Transforms of Sampled Functions
-void distanceTransform(const cv::Mat &inputMatrix, cv::Mat &outputMatrix,
-		cv::Mat &locations, std::vector<float> weights = std::vector<float>());
+namespace cv
+{
 
+// Calculates the distance trasnform as described in Distance Transforms of Sampled Functions
+CV_EXPORTS_W void distanceTransform(cv::InputArray sampled,
+    cv::OutputArray dist, cv::OutputArray locations,
+    cv::InputArray weights=cv::noArray());
+    
+}
 
 #endif

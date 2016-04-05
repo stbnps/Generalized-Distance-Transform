@@ -3,7 +3,7 @@
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/opencv_modules.hpp"
-#include "dt.hpp"
+#include "opencv2/gen_dist_trans.hpp"
 
 
 using namespace cv;
@@ -15,9 +15,8 @@ int main() {
 	Mat l;
 
 	// Just to test that weighting is working
-	vector<float> weights;
-	weights.push_back(2);
-	weights.push_back(2);
+    double w_[] = {2, 2};
+	Mat weights(2, 1, CV_32FC2, w_);
 
 	t.at<float>(2, 2) = 1;
 
