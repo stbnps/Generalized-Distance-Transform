@@ -1,8 +1,9 @@
-
 #include "opencv2/opencv.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/opencv_modules.hpp"
+
+// If this module reaches upstream OpenCV modules tree, remove this line:
 #include "opencv2/gen_dist_trans.hpp"
 
 

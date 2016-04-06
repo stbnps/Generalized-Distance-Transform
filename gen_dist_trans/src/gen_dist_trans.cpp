@@ -149,13 +149,13 @@ void distanceTransform1d(float *f, float *d, int *l, int n) {
 // Parallel invoker
 class DistanceTransformInvoker: public ParallelLoopBody {
 public:
-	DistanceTransformInvoker(Mat& inputMatrix, Mat *outputMatrix,
-			Mat *locations, int **steps, int dim) {
-		*outputMatrix = inputMatrix.clone();
-		this->outputMatrix = outputMatrix;
-		this->locationsMatrix = locations;
-		this->steps = steps;
-		this->dim = dim;
+    DistanceTransformInvoker(Mat& inputMatrix_, Mat *outputMatrix_,
+            Mat *locations_, int **steps_, int dim_) {
+        *outputMatrix_ = inputMatrix_.clone();
+        this->outputMatrix = outputMatrix_;
+        this->locationsMatrix = locations_;
+        this->steps = steps_;
+        this->dim = dim_;
 
 	}
 
@@ -181,19 +181,19 @@ public:
 			 * This array will hold the section of the global matrix were the
 			 * distance transform would be performed.
 			 */
-			for (int i = 0; i < outputMatrix->size[dim]; ++i) {
-				f[i] = castedOutputMatrix[dataStart
-						+ i * outputMatrix->step[dim] / 4];
+            for (int j = 0; j < outputMatrix->size[dim]; ++j) {
+                f[j] = castedOutputMatrix[dataStart
+                        + j * outputMatrix->step[dim] / 4];
 			}
 			distanceTransform1d(f, d, l, outputMatrix->size[dim]);
 
 			// Strided write
-			for (int i = 0; i < outputMatrix->size[dim]; ++i) {
-				castedOutputMatrix[dataStart + i * outputMatrix->step[dim] / 4] =
-						d[i];
+            for (int j = 0; j < outputMatrix->size[dim]; ++j) {
+                castedOutputMatrix[dataStart + j * outputMatrix->step[dim] / 4] =
+                        d[j];
 				castedLocationsMatrix[dataStart
-						+ i * outputMatrix->step[dim] / 4
-						+ dim * locationsMatrix->step[0] / 4] = l[i];
+                        + j * outputMatrix->step[dim] / 4
+                        + dim * locationsMatrix->step[0] / 4] = l[j];
 			}
 
 			delete[] f;
@@ -229,7 +229,8 @@ void distanceTransform(InputArray _sampled, OutputArray _dist,
 	// Input matrix has proper type
 	CV_Assert(inputMatrix.type() == CV_32FC1);
     // Dimension scaling is unspecified or has proper size
-	CV_Assert(weights.empty() || (weights.total() == inputMatrix.dims));
+    CV_Assert(weights.empty()
+              || (weights.total() == (size_t)inputMatrix.dims));
 
     // Create location matrix, for each input pixel the location matrix will
     // have "inputMatrix.dims" parameters.
@@ -323,7 +324,7 @@ void distanceTransform(InputArray _sampled, OutputArray _dist,
 		}
 
 		for (int i = 0; i < iterations; ++i) {
-			delete (currentStep[i]);
+            delete[](currentStep[i]);
 		}
 		delete[](currentStep);
 
