@@ -1,7 +1,10 @@
 /*
-This file has been taken from the OpenCV project at https:github.com/Itseez/opencv
-It has some small modifications to make it more reusable for generating binding 
+The content of this file has been taken from the OpenCV project at 
+https:github.com/Itseez/opencv
+It has been modified to make it more reusable for generating binding 
 on other projects.
+modifications: Nicolas Granger <nicolas.granger@telecom-sudparis.eu>
+
 For your information, the original License is given below:
 
 By downloading, copying, installing or using the software you agree to this license.
@@ -87,10 +90,12 @@ typedef std::vector<std::vector<DMatch> > vector_vector_DMatch;
 
 
 #ifdef HAVE_OPENCV_FEATURES2D
+#include "opencv2/features2d.hpp"
 typedef SimpleBlobDetector::Params SimpleBlobDetector_Params;
 #endif
 
 #ifdef HAVE_OPENCV_FLANN
+#include "opencv2/flann.hpp"
 typedef cvflann::flann_distance_t cvflann_flann_distance_t;
 typedef cvflann::flann_algorithm_t cvflann_flann_algorithm_t;
 #endif

@@ -1,7 +1,10 @@
 /*
-This file has been taken from the OpenCV project at https:github.com/Itseez/opencv
-It has some modifications to make it more reusable for generating binding 
-on other projects.
+The content of this file has been taken from the OpenCV project at 
+https:github.com/Itseez/opencv
+It has been modified to make it more reusable for generating binding on other 
+projects.
+modifications: Nicolas Granger <nicolas.granger@telecom-sudparis.eu>
+
 For your information, the original License is given below:
 
 By downloading, copying, installing or using the software you agree to this license.

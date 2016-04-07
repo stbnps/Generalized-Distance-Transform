@@ -29,7 +29,7 @@
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/opencv_modules.hpp"
-#include "opencv2/gen_dist_trans.hpp"
+#include "opencv2/gendistrans.hpp"
 #include <algorithm>
 
 using namespace std;

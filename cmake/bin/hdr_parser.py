@@ -1,8 +1,11 @@
 #!/usr/bin/env python
 
-# This file has been taken from the OpenCV project at https://github.com/Itseez/opencv
-# It has some small modifications to make it more reusable for generating binding 
+# The content of this file has been taken from the OpenCV project at 
+# https://github.com/Itseez/opencv
+# It has been modified to make it more reusable for generating binding 
 # on other projects.
+# modifications: Nicolas Granger <nicolas.granger@telecom-sudparis.eu>
+
 # For your information, the original License is given below:
 
 # By downloading, copying, installing or using the software you agree to this license.
@@ -62,13 +65,14 @@ where the list of modifiers is yet another nested list of strings
 
 class CppHeaderParser(object):
 
-    def __init__(self):
+    def __init__(self, root_ns):
         self.BLOCK_TYPE = 0
         self.BLOCK_NAME = 1
         self.PROCESS_FLAG = 2
         self.PUBLIC_SECTION = 3
         self.CLASS_DECL = 4
 
+        self.root_ns = root_ns
         self.namespaces = set()
 
     def batch_replace(self, s, pairs):
@@ -327,7 +331,7 @@ class CppHeaderParser(object):
             fname += " ()"
             apos = fdecl.find("(", apos+1)
 
-        fname = "cv." + fname.replace("::", ".")
+        fname = self.root_ns + "." + fname.replace("::", ".")
         decl = [fname, rettype, [], []]
 
         # inline constructor implementation
@@ -606,18 +610,18 @@ class CppHeaderParser(object):
         """
         adds the dot-separated container class/namespace names to the bare function/class name, e.g. when we have
 
-        namespace cv {
+        namespace ~root_ns~ {
         class A {
         public:
             f(int);
         };
         }
 
-        the function will convert "A" to "cv.A" and "f" to "cv.A.f".
+        the function will convert "A" to "~root_ns~.A" and "f" to "~root_ns~.A.f".
         """
         if not self.block_stack:
             return name
-        if name.startswith("cv."):
+        if name.startswith(self.root_ns + "."):
             return name
         qualified_name = (("." in name) or ("::" in name))
         n = ""
@@ -631,7 +635,7 @@ class CppHeaderParser(object):
             if block_name and (block_type == "namespace" or not qualified_name):
                 n += block_name + "."
         n += name.replace("::", ".")
-        if n.endswith(".Algorithm"):
+        if self.root_ns == "cv" and n.endswith(".Algorithm"):
             n = "cv.Algorithm"
         return n
 

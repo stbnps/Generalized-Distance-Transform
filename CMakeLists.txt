@@ -15,33 +15,36 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0 -Wall")
 # Dependencies ----------------------------------------------------------------
 
 find_package(OpenCV REQUIRED)
-include(cmake/OpenCVPythonModule.cmake)
+include(cmake/CPPyModule.cmake)
 
 
 # Targets ---------------------------------------------------------------------
 
 # C++ Library
-add_library(gen_dist_trans SHARED
-    gen_dist_trans/src/gen_dist_trans.cpp)
-target_include_directories(gen_dist_trans PUBLIC
-  ${OpenCV_INCLUDE_DIRS}
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/gen_dist_trans/include>
-  $<INSTALL_INTERFACE:include/gen_dist_trans>)
-target_link_libraries(gen_dist_trans
+add_library(gendistrans SHARED
+    gendistrans/src/gendistrans.cpp)
+target_include_directories(gendistrans PUBLIC
+    ${OpenCV_INCLUDE_DIRS}
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/gendistrans/include>
+    $<INSTALL_INTERFACE:include/gendistrans>)
+target_link_libraries(gendistrans
     ${OpenCV_LIBS})
-set_property(TARGET gen_dist_trans
+set_property(TARGET gendistrans
     PROPERTY INTERFACE_POSITION_INDEPENDENT_CODE ON)
 
 # Python module
 if(${ENABLE_PYTHON})
-    add_python_opencv_bindings(gendistrans
-        PYVER "3"
-        # We use directly the library header because it follows the Opencv
-        # annotations conventions
-        HEADERS gen_dist_trans/include/opencv2/gen_dist_trans.hpp
-        # The wrapping source files would go here if there were any
-        )
-    target_link_libraries(gendistrans gen_dist_trans)
+    as_python_module(gendistrans_py
+        NAMESPACE cv # C++ code is written as if it was an OpenCV module
+        MODULE_NAME gendistrans # but we cannot reuse the cv2 module name
+        # Library source files are alread formated as wrappers
+        HEADERS gendistrans/include/opencv2/gendistrans.hpp
+        # Add the whole source code to the module (standalone module)
+        SOURCES gendistrans/src/gendistrans.cpp)
+    # No linking because all source files have been put into the module
+    target_include_directories(gendistrans_py PUBLIC
+        ${OpenCV_INCLUDE_DIRS}
+        gendistrans/include)
 endif()
 
 
@@ -58,7 +61,7 @@ if(${ENABLE_TESTING})
         tests/dontcrash.cpp)
     target_link_libraries(dontcrash
         ${OpenCV_LIBS}
-        gen_dist_trans)
+        gendistrans)
     add_test(test_dontcrash
         dontcrash)
 endif()

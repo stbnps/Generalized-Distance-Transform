@@ -4,7 +4,7 @@
 #include "opencv2/opencv_modules.hpp"
 
 // If this module reaches upstream OpenCV modules tree, remove this line:
-#include "opencv2/gen_dist_trans.hpp"
+#include "opencv2/gendistrans.hpp"
 
 
 using namespace cv;
