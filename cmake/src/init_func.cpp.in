@@ -1,0 +1,34 @@
+static PyMethodDef module_methods[] = {
+    {NULL, NULL}
+};
+
+static struct PyModuleDef moduledef =
+{
+    PyModuleDef_HEAD_INIT,
+    "@ARG_NAMESPACE@",
+    "Python bindings",
+    -1,     /* size of per-interpreter state of the module,
+               or -1 if the module keeps state in global variables. */
+    module_methods
+};
+
+extern "C" PyMODINIT_FUNC
+PyInit_@ARG_MODULE_NAME@()
+{
+    // imports numpy convertors (or something like that):
+    // http://stackoverflow.com/questions/12957492/
+    // writing-python-bindings-for-c-code-that-use-opencv
+    import_array();
+
+    // Create empty module
+#if PY_MAJOR_VERSION >= 3
+    PyObject* m = PyModule_Create(&moduledef);
+#else
+    PyObject* m = Py_InitModule("@ARG_NAMESPACE@", module_methods);
+#endif
+
+    // Fill with items from this module
+#include "pyopencv_generated_type_reg.h"
+    init_submodules(m); // from "pyopencv_generated_ns_reg.h"
+    return m;
+}
